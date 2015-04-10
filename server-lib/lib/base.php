@@ -2009,22 +2009,23 @@ class F3 extends Base {
         // Alias the GUI variable (2.0+)
         self::$vars['UI'] = &self::$vars['GUI'];
 
-        if (php_sapi_name() != 'cli') {
-            if (strpos($_SERVER['REQUEST_URI'], '/response') === false) { //兼容银联的格式
-                //防XSS
-                $GLOBALS['_POST'] = F3::xssEncode($GLOBALS['_POST']);
-                $GLOBALS['_GET'] = F3::xssEncode($GLOBALS['_GET']);
-                $GLOBALS['_COOKIE'] = F3::xssEncode($GLOBALS['_COOKIE']);
-                if(!strcasecmp($_SERVER['REQUEST_METHOD'], 'POST'))
-                {
-                    $info = parse_url($_SERVER['HTTP_REFERER']);
-                    if(!empty($info['host']) && $info['host'] != $_SERVER['HTTP_HOST'])
-                    {
-                        self::error(404);
-                    }
-                }
-            }
-        }
+        //PPEAR 本地开发无须安全校验检查
+        // if (php_sapi_name() != 'cli') {
+        //     if (strpos($_SERVER['REQUEST_URI'], '/response') === false) { //兼容银联的格式
+        //         //防XSS
+        //         $GLOBALS['_POST'] = F3::xssEncode($GLOBALS['_POST']);
+        //         $GLOBALS['_GET'] = F3::xssEncode($GLOBALS['_GET']);
+        //         $GLOBALS['_COOKIE'] = F3::xssEncode($GLOBALS['_COOKIE']);
+        //         if(!strcasecmp($_SERVER['REQUEST_METHOD'], 'POST'))
+        //         {
+        //             $info = parse_url($_SERVER['HTTP_REFERER']);
+        //             if(!empty($info['host']) && $info['host'] != $_SERVER['HTTP_HOST'])
+        //             {
+        //                 self::error(404);
+        //             }
+        //         }
+        //     }
+        // }
         // Create convenience containers for PHP globals
         foreach (explode('|', self::PHP_Globals) as $var) {
             // Sync framework and PHP globals
