@@ -1,0 +1,20 @@
+{
+  "name": "ppear-command-local",
+  "version": "0.0.1",
+  "description": "a tool for ppear to deploy code",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ppear",
+    "debug"
+  ],
+  "author": {
+    "name": "wangcheng"
+  },
+  "license": "ISC",
+  "dependencies": {
+
+  }
+}
