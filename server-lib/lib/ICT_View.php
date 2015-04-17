@@ -1,5 +1,6 @@
 <?php
 
+require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . "ICT_Static.php";
 
 class ICT_View extends F3{
 

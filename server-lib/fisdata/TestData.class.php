@@ -98,7 +98,7 @@ class TestData {
             $testData = $data_instance->getData($candidate_tmpl);
         }
 
-        $root = Util::normalizePath(TEMPLATE_ROOT) . DIRECTORY_SEPARATOR;
+        $root = Util::normalizePath(TEMPLATE_ROOT) . "/";
 
         $id = str_replace($root, '', Util::normalizePath($candidate_tmpl));
         $templateInfo = self::parseTemplate($id);
