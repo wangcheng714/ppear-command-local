@@ -26,6 +26,8 @@ class ICT_View extends F3{
         'css' => array()
     );
 
+    
+
     protected static $_imported = array();
 
     protected static $map = array();
@@ -39,6 +41,25 @@ class ICT_View extends F3{
         if(isset($name)){
             self::$productName = $name;
             self::$_map_dir .= '/' . $name;
+        }
+    }
+
+    //ls-diff 
+    protected static $static_keyhash_map = array(
+        'js' => array(),
+        'css' => array()
+    );
+
+    protected static $staticLoadType = 'normal';
+    public static function setStaticLoadType($type){
+        if(isset($type) && strtolower($type) == "localstorage"){
+            self::$staticLoadType = $type;
+        }
+    }
+    protected static $cssLS = false;
+    public static function setCssLS($css){
+        if($css){
+            self::$cssLS = true;
         }
     }
 
@@ -140,7 +161,12 @@ class ICT_View extends F3{
                     }
                 }
                 if(is_array(self::$_collection[$type])){
-                   self::$_collection[$type][] = $uri;
+                    self::$_collection[$type][] = $uri;
+                    //localstorage diff
+                    self::$static_keyhash_map[$type][] = array(
+                        "key" => $info['key'],
+                        "hash" => $info['hash']
+                    );
                 }
                 return $uri;
             } else {
