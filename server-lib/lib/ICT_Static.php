@@ -70,7 +70,7 @@ class ICT_Static extends ICT_View {
                             }
                         }
                         $html .= join(",", $pkgs);
-                    $html .= ']);';
+                    $html .= '], ' . self::$lsCallback .');';
                     $html .= '</script>';
                 }else{
                     $html  = '<script type="text/javascript" src="';

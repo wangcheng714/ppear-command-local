@@ -63,6 +63,13 @@ class ICT_View extends F3{
         }
     }
 
+    protected static $lsCallback = null;
+    public static function setLsCallback($cb){
+        self::$lsCallback = $cb;
+    }
+
+    //end ls-diff
+
     /**
      * @param string $map_dir
      */
@@ -312,6 +319,27 @@ class ICT_View extends F3{
     }
     public static function renderScript(){
         echo self::renderPool('script');
+    }
+
+    /**
+     * cb 回调函数的名称
+     */
+    public static function renderLSScript(){
+        // 1. 正则替换script 2. 内容定义到回掉函数中  3. 输出到页面
+        //$scriptReg = //;
+
+        $scriptReg = '/<script\s*[^>]*>|<\/script>/';
+        $scriptCode = '';
+        $scriptInnerCode = preg_replace($scriptReg, '', self::$_pool['script']);
+
+        // return $scriptCode;
+        if(isset(self::$_pool['script'])){
+            
+            $scriptCode .= '<script type="text/javascript">';
+                $scriptCode .= 'function ' . self::$lsCallback . '(){'.  $scriptInnerCode . '}';
+            $scriptCode .= '</script>';
+        } 
+        return $scriptCode;
     }
 
     //载入cms片段
