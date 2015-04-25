@@ -1,6 +1,6 @@
 {
   "name": "ppear-command-local",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "description": "a tool for ppear to deploy code",
   "main": "index.js",
   "scripts": {

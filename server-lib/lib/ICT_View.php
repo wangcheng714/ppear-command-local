@@ -7,6 +7,12 @@ class ICT_View extends F3{
 
 
     const MAP_EXT = '.json';
+    const STATIC_NORMAL_LOAD_TYPE = 'normal';
+    const STATIC_LS_LOAD_TYPE = 'localstorage';
+    const STATIC_DEBUG_LOAD_TYPE = 'debug';
+
+    const RENDER_ENV_PRO = 'pro';
+    const RENDER_ENV_DEV = 'dev';
 
     /**
      * @var string
@@ -34,7 +40,7 @@ class ICT_View extends F3{
 
     private static $_blocks =  array();
 
-    //产品线名称例如pc、mo
+    //产品线名称例如pc、mo、hybrid
     private static $productName = null;
 
     public static function setProductName($name){
@@ -44,17 +50,29 @@ class ICT_View extends F3{
         }
     }
 
-    //ls-diff 
+    public static function getProductName(){
+        return self::$productName;
+    }
+
+    /* ls-diff start */
     protected static $static_keyhash_map = array(
         'js' => array(),
         'css' => array()
     );
 
-    protected static $staticLoadType = 'normal';
+    private static $staticLoadType = self::STATIC_NORMAL_LOAD_TYPE;
+    private static $staticLoadTypeDefined = array(
+        self::STATIC_NORMAL_LOAD_TYPE,
+        self::STATIC_LS_LOAD_TYPE,
+        self::STATIC_DEBUG_LOAD_TYPE
+    );
     public static function setStaticLoadType($type){
-        if(isset($type) && strtolower($type) == "localstorage"){
+        if(in_array(strtolower($type), self::$staticLoadTypeDefined)){
             self::$staticLoadType = $type;
         }
+    }
+    public static function getStaticLoadType(){
+        return self::$staticLoadType;
     }
     protected static $cssLS = false;
     public static function setCssLS($css){
@@ -63,12 +81,28 @@ class ICT_View extends F3{
         }
     }
 
-    protected static $lsCallback = null;
-    public static function setLsCallback($cb){
-        self::$lsCallback = $cb;
+    //定义ls的回调函数名
+    protected static $lsCallbackName = 'lsDiffCallback';
+    
+    /* ls-diff end */
+
+    /* 调试方案 start */
+    protected static $single_files_map = array(
+        'js' => array(),
+        'css' => array()
+    );
+    private static $renderEnv = self::RENDER_ENV_PRO;
+
+    public static function setRenderEnv($env){
+        if(strtolower($env) == self::RENDER_ENV_DEV){
+            self::$renderEnv = self::RENDER_ENV_DEV;
+        }
     }
 
-    //end ls-diff
+    public static function getRenderEnv(){
+        return self::$renderEnv;
+    }
+    /* 调试方案 end */
 
     /**
      * @param string $map_dir
@@ -104,6 +138,16 @@ class ICT_View extends F3{
     }
 
 
+    private static function print_stack_trace(){
+        $array =debug_backtrace();
+      
+        unset($array[0]);
+        foreach($array as $row){
+            $html .=$row['file'].':'.$row['line'].'行,调用方法:'.$row['function']."<p>";
+        }
+        return$html;
+    }
+
     /**
      * @param $id
      * @param $caller_ns
@@ -112,8 +156,8 @@ class ICT_View extends F3{
      * @return mixed
      */
     public static function getInfo(&$id, $caller_ns = null, &$ns = null, &$map = null){
+        
         $ns = self::getNamespace($id, $caller_ns);
-
         if(isset(self::$_maps[$ns])){
            $map = self::$_maps[$ns];
         } else {
@@ -149,6 +193,7 @@ class ICT_View extends F3{
         if(isset(self::$_imported[$id])){
             return self::$_imported[$id];
         } else {
+
             $info = self::getInfo($id, $caller_ns, $ns, $map);
             if($info){
                 $uri = $info['uri'];
@@ -162,18 +207,28 @@ class ICT_View extends F3{
                 } else {
                     self::$_imported[$id] = $uri;
                 }
+
                 if(isset($info['deps'])){
                     foreach($info['deps'] as $dId){
                         self::import($dId);
                     }
                 }
+
                 if(is_array(self::$_collection[$type])){
                     self::$_collection[$type][] = $uri;
-                    //localstorage diff
-                    self::$static_keyhash_map[$type][] = array(
-                        "key" => $info['key'],
-                        "hash" => $info['hash']
-                    );
+                    
+                    /* ls-diff start */
+                    if(isset($info['key']) && isset($info['hash'])){
+                        self::$static_keyhash_map[$type][] = array(
+                            "key" => $info['key'],
+                            "hash" => $info['hash']
+                        );
+                    }
+
+                    /* ls-diff end */
+                    /* 调试功能 start 目前调试无法加载独立文件*/
+                    self::$single_files_map[$type][] = $uri;
+                    /* 调试功能 end */
                 }
                 return $uri;
             } else {
@@ -207,20 +262,35 @@ class ICT_View extends F3{
 
     }
 
+
+    /**
+     * 资源加载临时方案 ： 
+     *   线上 ： 针对mox版本 采用修复后方案， 其他采用原方案
+     *   线下 ： 全部采用新方案， 会导致老版本css加载顺序问题
+     */
     public static function load ( $path, $caller_ns=null, $replace_static=false, $data=null ){
-
-        $uri = self::import( $path, $caller_ns );
-
-        $html = self::render($uri, $data);
-
-        if ( $replace_static ){
-            $html = ICT_Static::replace($html);
+        if(self::getProductName() == 'mox' || self::getRenderEnv() == self::RENDER_ENV_DEV){
+            $info = self::getInfo($path, $caller_ns, $ns, $map);
+            $uri = $info['uri'];
+            $html = self::render($uri, $data);
+            $uri = self::import( $path, $caller_ns );  
+        }else{
+            $uri = self::import( $path, $caller_ns );
+            $html = self::render($uri, $data);
+            if ( $replace_static ){
+                $html = ICT_Static::replace($html);
+            }    
         }
-
         return $html;
     }
 
-/**********支持本地调试升级*********/
+    public static function renderPage($page_path){
+        $html = self::load($page_path);
+        $html = ICT_Static::replace($html);
+        echo $html;
+    }
+
+    /**********支持本地调试升级****start*****/
 
     private static $templateDir = null;
 
@@ -232,21 +302,27 @@ class ICT_View extends F3{
         return self::$templateDir;
     }
 
+    //线上版本需要去掉
     public static function resolve($subPath){
         $file = realpath(self::$templateDir . $subPath);
         return $file;
     }
 
     public static function renderTestPage($page_path, $data){
-        self::$vars = array_merge(self::$vars, $data);
-        $uri = self::import( $page_path, $caller_ns );
-        $html = self::render($uri, $data);
-        $html = ICT_Static::replace($html);
 
+        self::setRenderEnv(self::RENDER_ENV_DEV);
+
+        self::$vars = array_merge(self::$vars, $data);
+        $info = self::getInfo($page_path, $caller_ns, $ns, $map);
+        $uri = $info['uri'];
+        $html = self::render($uri, $data);
+
+        $uri = self::import( $page_path, $caller_ns );
+        $html = ICT_Static::replace($html);
         echo $html;
     }
 
-/**********支持本地调试升级*********/
+    /**********支持本地调试升级*****end****/
 
 
     public static function _load( $path, $data = null){
@@ -261,6 +337,7 @@ class ICT_View extends F3{
     }
 
     public static function layout( $path ) {
+
        echo self::load( $path , null, true );
     }
 
@@ -318,28 +395,22 @@ class ICT_View extends F3{
         self::endPool();
     }
     public static function renderScript(){
-        echo self::renderPool('script');
-    }
-
-    /**
-     * cb 回调函数的名称
-     */
-    public static function renderLSScript(){
-        // 1. 正则替换script 2. 内容定义到回掉函数中  3. 输出到页面
-        //$scriptReg = //;
-
-        $scriptReg = '/<script\s*[^>]*>|<\/script>/';
-        $scriptCode = '';
-        $scriptInnerCode = preg_replace($scriptReg, '', self::$_pool['script']);
-
-        // return $scriptCode;
-        if(isset(self::$_pool['script'])){
-            
-            $scriptCode .= '<script type="text/javascript">';
-                $scriptCode .= 'function ' . self::$lsCallback . '(){'.  $scriptInnerCode . '}';
-            $scriptCode .= '</script>';
-        } 
-        return $scriptCode;
+        //ls_load 资源为异步加载因此需要回调执行
+        $staticLoadType = self::getStaticLoadType();
+        if($staticLoadType == self::STATIC_LS_LOAD_TYPE){
+            $scriptCode = '';
+            $scriptReg = '/<script\s*[^>]*>|<\/script>/';
+            if(isset(self::$_pool['script'])){
+                $scriptInnerCode = preg_replace($scriptReg, '', self::$_pool['script']);    
+                $scriptCode .= '<script type="text/javascript">';
+                    $scriptCode .= 'function ' . self::$lsCallbackName . '(){'.  $scriptInnerCode . '}';
+                $scriptCode .= '</script>';
+            } 
+            echo $scriptCode;
+        }else{
+            echo self::renderPool('script');
+        }
+        
     }
 
     //载入cms片段
